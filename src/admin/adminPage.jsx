@@ -201,6 +201,19 @@ function ResourceForm({ config, values, onChange, onSubmit, onCancel, isSaving, 
                         );
                     }
 
+                    if (field.type === "textarea") {
+                        return (
+                            <label className="admin-form-field admin-form-field--wide" key={field.name}>
+                                <span>{field.label}</span>
+                                <textarea
+                                    required={field.required}
+                                    value={fieldValue}
+                                    onChange={(event) => onChange(field.name, event.target.value)}
+                                />
+                            </label>
+                        );
+                    }
+
                     return (
                         <label className="admin-form-field" key={field.name}>
                             <span>{field.label}</span>

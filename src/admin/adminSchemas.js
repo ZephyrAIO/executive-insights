@@ -113,6 +113,16 @@ export const ADMIN_RESOURCES = {
                 required: true,
                 showWhen: (values) => values.type === "field",
             },
+            {
+                name: "defaultValuesJson",
+                label: "Default values JSON",
+                type: "textarea",
+            },
+            {
+                name: "allowedValuesJson",
+                label: "Allowed values JSON",
+                type: "textarea",
+            },
         ],
     },
     hierarchies: {

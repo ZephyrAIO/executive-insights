@@ -29,6 +29,9 @@ popover
         label <-> chevron
         label conditions:
             default = hierarchy.name
+            if 1 selection = field option qText (hierarchy priority)
+                field 1 has 1 selection & field 2 has 2 selection = field 2 name (2)
+                field 1 has 2 selection & field 2 has 1 selection = field option qtext
             if selections = hierarchy.name ({selections.length})
     Popover Content
         field search
@@ -38,7 +41,6 @@ popover
             label <-> chevron
             label conditions:
                 default = fieldName
-                if 1 selection = field option qText
                 if multiple selections = fieldName ({selections.length})
         Collapsible content (per hierarchy field)
             field options list
@@ -55,6 +57,9 @@ Container
 Hierarchy field lists
     300px max height
     overflow auto
+Ordering
+    field option lists must not reorder while their popover is open, including after selection and Qlik changed events
+    selected-first reordering should happen only after the popover closes, so the next open renders in the correct order
 
 ## Qlik Capability API
 Qlik field option styling
@@ -127,8 +132,23 @@ Widget-level filters read the qlik appId from the widget to render the field dat
 Widget level filters write to the qlik appId from the widget.
 
 On field option selection apply the values, show optimistic UI, show loading indicator.
+Opening or closing a filter can refresh loaded field values, but cached option lists stay visible during the refresh. Only show the Loading values placeholder when no values have been loaded yet.
 
-## Senarios
+Filter value JSON:
+defaultValuesJson stores versioned default selections as { "version": 2, "fields": { "fieldName": { "options": ["value"] } } }.
+allowedValuesJson stores versioned presentation and allow-list config as { "version": 2, "fields": { "fieldName": { "fieldLabel": "Label", "options": ["value"], "automaticVisibility": true } } }.
+
+Allowed value behavior:
+fieldLabel is used instead of fieldName for presentation.
+allowed options are component-specific presentation rules, not shared qlik state. The shared qlik app/field store keeps raw field options so dashboard-level and widget-level filters can share selections while using different allowedValuesJson rules.
+if options is omitted or empty, all loaded values for that field are visible.
+if options is non-empty, only matching option qText values are visible unless an out-of-list value is selected.
+selected out-of-list values stay visible so the user can see and clear them.
+allowed options are ordered by the JSON option order within each qState group.
+if automaticVisibility is true, a hierarchy field is visible only when the field above it has a selection.
+defaults apply on dashboard open and after Clear all.
+
+## Scenarios
 When a filter (e.g. field filter - fieldName = Segment) is used for multiple widgets of the same qlik app the data should be synced and they should share the same listObject and state.
 On dashboard unmount or change should clear all filters state and qlik with app.clearAll() per app.
 

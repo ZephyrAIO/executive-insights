@@ -98,6 +98,8 @@ function normalizePayload(name, payload, existingItem) {
             widgetId: payload.widgetId || null,
             type,
             fieldName: type === "field" && typeof payload.fieldName === "string" ? payload.fieldName : null,
+            defaultValuesJson: typeof payload.defaultValuesJson === "string" ? payload.defaultValuesJson.trim() : "",
+            allowedValuesJson: typeof payload.allowedValuesJson === "string" ? payload.allowedValuesJson.trim() : "",
         };
     }
 
@@ -165,6 +167,8 @@ function mapFilter(filter) {
         filterHierarchyId: filter.filterHierarchyId,
         filterHierarchy: hierarchy ? mapHierarchy(hierarchy) : null,
         fieldName: filter.fieldName ?? null,
+        defaultValuesJson: filter.defaultValuesJson ?? "",
+        allowedValuesJson: filter.allowedValuesJson ?? "",
     };
 }
 

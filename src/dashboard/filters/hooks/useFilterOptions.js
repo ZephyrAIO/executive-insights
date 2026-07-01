@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 
 import { DEFAULT_BATCH_SIZE, useQlikListObject } from "../../../shared/qlik/hooks/useQlikListObject";
+import { getVisibleFilterOptions } from "./filterConfig";
 import { getFilterFieldKey, selectFilterField, useFilterStore } from "../stores/filterStore";
 
 function normalizeError(error, fallbackMessage) {
@@ -19,10 +20,15 @@ function normalizeError(error, fallbackMessage) {
     return fallbackMessage;
 }
 
+function indexOptions(options) {
+    return Object.fromEntries(options.map((option) => [option.value, option]));
+}
+
 export function useFilterOptions({
     dashboardId,
     scopeId,
     appId,
+    allowedOptions = null,
     fieldName,
     batchSize = DEFAULT_BATCH_SIZE,
     preserveOrder = false,
@@ -36,11 +42,24 @@ export function useFilterOptions({
     const mergePage = useFilterStore((state) => state.mergePage);
     const setError = useFilterStore((state) => state.setError);
     const lastSearchRef = useRef(field.search);
+    const optionsLengthRef = useRef(field.options.length);
     const preserveOrderRef = useRef(preserveOrder);
     const loadedTopsRef = useRef(field.loadedTops);
     const searchRevisionRef = useRef(field.searchRevision);
 
     const refreshLoadedPagesRef = useRef(null);
+
+    const visibleField = useMemo(
+        () =>
+            getVisibleFilterOptions({
+                allowedOptions,
+                options: field.options,
+                selectedValues: field.selected,
+                totalSize: field.totalSize,
+            }),
+        [allowedOptions, field.options, field.selected, field.totalSize],
+    );
+    const visibleOptionsByValue = useMemo(() => indexOptions(visibleField.options), [visibleField.options]);
 
     const handleChanged = useCallback(() => {
         refreshLoadedPagesRef.current?.();
@@ -48,13 +67,17 @@ export function useFilterOptions({
 
     const listObject = useQlikListObject({ appId, fieldName, batchSize, onChanged: handleChanged });
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         preserveOrderRef.current = preserveOrder;
     }, [preserveOrder]);
 
     useEffect(() => {
         loadedTopsRef.current = field.loadedTops;
     }, [field.loadedTops]);
+
+    useEffect(() => {
+        optionsLengthRef.current = field.options.length;
+    }, [field.options.length]);
 
     useEffect(() => {
         searchRevisionRef.current = field.searchRevision;
@@ -69,11 +92,16 @@ export function useFilterOptions({
             return;
         }
 
-        setLoading(fieldKey, true);
+        const hasCachedValues = optionsLengthRef.current > 0 || loadedTopsRef.current.length > 0;
+        setLoading(fieldKey, !hasCachedValues);
 
         try {
             const result = await listObject.readInitial();
-            mergePage(fieldKey, result.options, { preserveOrder: shouldPreserveOrder, top: 0, totalSize: result.totalSize });
+            mergePage(fieldKey, result.options, {
+                preserveOrder: shouldPreserveOrder,
+                top: 0,
+                totalSize: result.totalSize,
+            });
         } catch (error) {
             setError(fieldKey, normalizeError(error, `Unable to load ${fieldName}.`));
         }
@@ -110,7 +138,10 @@ export function useFilterOptions({
                                   });
 
                         if (refreshRevision === currentRefreshRevision) {
-                            mergePage(fieldKey, options, { preserveOrder: true, top });
+                            mergePage(fieldKey, options, {
+                                preserveOrder: preserveOrderRef.current,
+                                top,
+                            });
                         }
                     }),
                 );
@@ -157,7 +188,11 @@ export function useFilterOptions({
 
                 if (isActive) {
                     const result = await listObject.readInitial();
-                    mergePage(fieldKey, result.options, { preserveOrder: false, top: 0, totalSize: result.totalSize });
+                    mergePage(fieldKey, result.options, {
+                        preserveOrder: false,
+                        top: 0,
+                        totalSize: result.totalSize,
+                    });
                 }
             } catch (error) {
                 if (isActive) {
@@ -174,8 +209,11 @@ export function useFilterOptions({
     }, [field.search, fieldKey, fieldName, listObject, mergePage, setError, setLoading]);
 
     const loadMore = useCallback(
-        async (top) => {
-            if (field.loadedTops.includes(top) || field.loadingPages[top]) {
+        async () => {
+            const lastLoadedTop = field.loadedTops.length > 0 ? Math.max(...field.loadedTops) : -batchSize;
+            const top = lastLoadedTop + batchSize;
+
+            if (top >= field.totalSize || field.loadedTops.includes(top) || field.loadingPages[top]) {
                 return;
             }
 
@@ -187,14 +225,17 @@ export function useFilterOptions({
                     height: batchSize,
                     searchRevision: field.searchRevision,
                 });
-                mergePage(fieldKey, options, { preserveOrder: preserveOrderRef.current, top });
+                mergePage(fieldKey, options, {
+                    preserveOrder: preserveOrderRef.current,
+                    top,
+                });
             } catch (error) {
                 setError(fieldKey, normalizeError(error, `Unable to load more ${fieldName} values.`));
             } finally {
                 setPageLoading(fieldKey, top, false);
             }
         },
-        [batchSize, field.loadedTops, field.loadingPages, field.searchRevision, fieldKey, fieldName, listObject, mergePage, setError, setPageLoading],
+        [batchSize, field.loadedTops, field.loadingPages, field.searchRevision, field.totalSize, fieldKey, fieldName, listObject, mergePage, setError, setPageLoading],
     );
 
     return {
@@ -202,5 +243,8 @@ export function useFilterOptions({
         appLoading: listObject.appLoading,
         fieldKey,
         loadMore,
+        options: visibleField.options,
+        optionsByValue: visibleOptionsByValue,
+        totalSize: visibleField.totalSize,
     };
 }

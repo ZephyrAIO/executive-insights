@@ -4,6 +4,23 @@ import { getCachedValue, getOrCreateInflightRequest, hasCachedValue, setCachedVa
 import { getQlikConnectionConfig, useQlik } from "../../../shared/qlik/hooks/useQlik";
 import { getFilterFieldKey, selectFilterField, useFilterStore } from "../stores/filterStore";
 
+function getUniqueValues(values = []) {
+    return [...new Set(values.filter((value) => value !== null && value !== undefined))];
+}
+
+function getNextSelectedValues(selected, value, shouldSelect) {
+    if (shouldSelect) {
+        return selected.includes(value) ? selected : [...selected, value];
+    }
+
+    return selected.filter((selectedValue) => selectedValue !== value);
+}
+
+function shouldToggleTarget(selected, value, shouldSelect) {
+    const isSelected = selected.includes(value);
+    return shouldSelect ? !isSelected : isSelected;
+}
+
 function normalizeError(error, fallbackMessage) {
     if (error instanceof Error) {
         return error.message;
@@ -65,42 +82,67 @@ export function useFilterSelection({ dashboardId, scopeId, readAppId, writeAppId
     );
 
     const applySelection = useCallback(
-        async ({ nextSelected, toggledValue }) => {
+        async ({ nextSelected, shouldSelect, toggledValue }) => {
             if (qlikError || qlikLoading || !fieldName) {
                 setError(fieldKey, normalizeError(qlikError, `Unable to apply ${fieldName} selection.`));
                 return;
             }
 
-            const previousSelected = field.selected;
-            const targetAppIds = writeAppIds?.length ? writeAppIds : [readAppId];
-            setSelectedOptimistic(fieldKey, nextSelected);
-            setApplying(fieldKey, true);
+            const targetAppIds = getUniqueValues(writeAppIds?.length ? writeAppIds : [readAppId]);
+            const targetFieldKeys = targetAppIds.map((appId) => getFilterFieldKey({ dashboardId, appId, fieldName }));
+            const affectedFieldKeys = getUniqueValues([fieldKey, ...targetFieldKeys]);
+            const storeFields = useFilterStore.getState().fields;
+            const previousSelections = Object.fromEntries(
+                affectedFieldKeys.map((affectedFieldKey) => [
+                    affectedFieldKey,
+                    affectedFieldKey === fieldKey ? field.selected : storeFields[affectedFieldKey]?.selected ?? [],
+                ]),
+            );
+
+            affectedFieldKeys.forEach((affectedFieldKey) => {
+                const selected =
+                    affectedFieldKey === fieldKey
+                        ? nextSelected
+                        : getNextSelectedValues(previousSelections[affectedFieldKey], toggledValue, shouldSelect);
+
+                setSelectedOptimistic(affectedFieldKey, selected);
+                setApplying(affectedFieldKey, true);
+            });
 
             try {
                 await Promise.all(
                     targetAppIds.map(async (appId) => {
+                        const targetFieldKey = getFilterFieldKey({ dashboardId, appId, fieldName });
+
+                        if (!shouldToggleTarget(previousSelections[targetFieldKey] ?? [], toggledValue, shouldSelect)) {
+                            return;
+                        }
+
                         const app = await openApp(appId);
                         const qlikField = app.field(fieldName);
                         await qlikField.selectValues([toggledValue], true, true);
                     }),
                 );
             } catch (error) {
-                setSelectedOptimistic(fieldKey, previousSelected);
+                affectedFieldKeys.forEach((affectedFieldKey) => {
+                    setSelectedOptimistic(affectedFieldKey, previousSelections[affectedFieldKey]);
+                });
                 setError(fieldKey, normalizeError(error, `Unable to apply ${fieldName} selection.`));
             } finally {
-                setApplying(fieldKey, false);
+                affectedFieldKeys.forEach((affectedFieldKey) => {
+                    setApplying(affectedFieldKey, false);
+                });
             }
         },
-        [field.selected, fieldKey, fieldName, openApp, qlikError, qlikLoading, readAppId, setApplying, setError, setSelectedOptimistic, writeAppIds],
+        [dashboardId, field.selected, fieldKey, fieldName, openApp, qlikError, qlikLoading, readAppId, setApplying, setError, setSelectedOptimistic, writeAppIds],
     );
 
     const toggleValue = useCallback(
         (value) => {
-            const nextSelected = field.selected.includes(value)
-                ? field.selected.filter((selectedValue) => selectedValue !== value)
-                : [...field.selected, value];
+            const shouldSelect = !field.selected.includes(value);
+            const nextSelected = getNextSelectedValues(field.selected, value, shouldSelect);
 
-            applySelection({ nextSelected, toggledValue: value });
+            applySelection({ nextSelected, shouldSelect, toggledValue: value });
         },
         [applySelection, field.selected],
     );

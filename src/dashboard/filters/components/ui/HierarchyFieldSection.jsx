@@ -7,11 +7,7 @@ import { useFilterSelection } from "../../hooks/useFilterSelection";
 import { useFilterStore } from "../../stores/filterStore";
 import FilterOptionList from "./FilterOptionList.jsx";
 
-function getFieldLabel(fieldName, selected, optionsByValue) {
-    if (selected.length === 1) {
-        return optionsByValue[selected[0]]?.qText ?? selected[0];
-    }
-
+function getFieldLabel(fieldName, selected) {
     if (selected.length > 1) {
         return `${fieldName} (${selected.length})`;
     }
@@ -20,7 +16,9 @@ function getFieldLabel(fieldName, selected, optionsByValue) {
 }
 
 export default function HierarchyFieldSection({
+    allowedOptions = null,
     dashboardId,
+    fieldLabel,
     fieldName,
     preserveOrder = false,
     readAppId,
@@ -33,6 +31,7 @@ export default function HierarchyFieldSection({
         dashboardId,
         scopeId,
         appId: readAppId,
+        allowedOptions,
         fieldName,
         preserveOrder,
         refreshKey,
@@ -44,7 +43,7 @@ export default function HierarchyFieldSection({
         setSearch(optionsState.fieldKey, search);
     }, [optionsState.fieldKey, search, setSearch]);
 
-    const label = getFieldLabel(fieldName, selection.selected, optionsState.optionsByValue);
+    const label = getFieldLabel(fieldLabel, selection.selected);
 
     return (
         <Collapsible.Root className="dashboard-filter-hierarchy-field" defaultOpen>

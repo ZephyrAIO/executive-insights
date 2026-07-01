@@ -3,7 +3,7 @@
   "settings": [
     {
       "key": "core-qlik-application-id",
-      "value": "C:\\\\Users\\\\Monday\\\\Documents\\\\Qlik\\\\Sense\\\\Apps\\\\app1.qvf",
+      "value": "C:\\Users\\Monday\\Documents\\Qlik\\Sense\\Apps\\app1.qvf",
       "id": "khPID62EKUo"
     }
   ],
@@ -21,34 +21,13 @@
     {
       "id": "0fd0a8c1-b797-46d9-bbd1-4a08f6e6fce1",
       "name": "Revenue Overview",
-      "qlikApplicationId": "ac706353-d1ae-415d-a8e2-1daa163e8d84",
+      "qlikApplicationId": "2c188ab2-2eb8-4a55-bf9f-cad0d65b0fc3",
       "objectId": "7d2b2e66-12f7-484f-b3a0-5f0c1267cd3f",
       "type": "barchart"
     },
     {
-      "id": "e51e0e96-8670-49c8-8a6e-afcee7ecdf8d",
-      "name": "Executive Detail",
-      "qlikApplicationId": "2c188ab2-2eb8-4a55-bf9f-cad0d65b0fc3",
-      "objectId": "eb9e6235-bb22-43c3-a430-1a2b24a7fff2",
-      "type": "table"
-    },
-    {
-      "id": "b69363c7-9e63-45fa-85fe-1d21bd5acba2",
-      "name": "Regional Mix",
-      "qlikApplicationId": "ac706353-d1ae-415d-a8e2-1daa163e8d84",
-      "objectId": "ZUprAtL",
-      "type": "table"
-    },
-    {
-      "name": "my table",
-      "qlikApplicationId": "ac706353-d1ae-415d-a8e2-1daa163e8d84",
-      "objectId": "ZUprAtL",
-      "type": "table",
-      "id": "8a2e61de-cf6a-4192-a38a-bf9358cedf16"
-    },
-    {
       "name": "Normal Table",
-      "qlikApplicationId": "2c188ab2-2eb8-4a55-bf9f-cad0d65b0fc3",
+      "qlikApplicationId": "ac706353-d1ae-415d-a8e2-1daa163e8d84",
       "objectId": "6b056ca8-0979-4b1e-983c-8d5542673197",
       "type": "table",
       "id": "M1x5952EDHY"
@@ -59,16 +38,6 @@
       "id": "71088f87-0d00-4d15-94ca-f1308fd39263",
       "dashboardId": "4d8b396d-f1df-4f77-b970-7f5120f5f383",
       "widgetId": "0fd0a8c1-b797-46d9-bbd1-4a08f6e6fce1"
-    },
-    {
-      "id": "c3d6a410-e638-4557-aa54-9cabcf7b2391",
-      "dashboardId": "762f0e87-6f4d-4f1b-8e86-1578264953f8",
-      "widgetId": "b69363c7-9e63-45fa-85fe-1d21bd5acba2"
-    },
-    {
-      "id": "4bb9bf41-3763-403e-b4d5-adb62dce4840",
-      "dashboardId": "762f0e87-6f4d-4f1b-8e86-1578264953f8",
-      "widgetId": "e51e0e96-8670-49c8-8a6e-afcee7ecdf8d"
     },
     {
       "dashboardId": "4d8b396d-f1df-4f77-b970-7f5120f5f383",
@@ -83,7 +52,9 @@
       "type": "hierarchy",
       "filterHierarchyId": "805f31cc-1cdf-4ff1-91d3-8444ddf1045d",
       "fieldName": null,
-      "id": "tFHeqNcKn1c"
+      "id": "tFHeqNcKn1c",
+      "defaultValuesJson": "",
+      "allowedValuesJson": "{\"version\": 2,\"fields\": {\"Segment\": {\"fieldLabel\": \"segs\", \"options\": [\"C1\", \"C2\"], \"automaticVisibility\": false},\"Product Group\": {\"fieldLabel\": \"\", \"options\": [], \"automaticVisibility\": true}}}"
     },
     {
       "dashboardId": "4d8b396d-f1df-4f77-b970-7f5120f5f383",
@@ -92,6 +63,30 @@
       "filterHierarchyId": "",
       "fieldName": "Segment",
       "id": "GAC6m9VFJmk"
+    },
+    {
+      "dashboardId": "4d8b396d-f1df-4f77-b970-7f5120f5f383",
+      "widgetId": "0fd0a8c1-b797-46d9-bbd1-4a08f6e6fce1",
+      "type": "hierarchy",
+      "filterHierarchyId": "805f31cc-1cdf-4ff1-91d3-8444ddf1045d",
+      "fieldName": null,
+      "id": "pAbo1nCyeqA"
+    },
+    {
+      "dashboardId": "4d8b396d-f1df-4f77-b970-7f5120f5f383",
+      "widgetId": "M1x5952EDHY",
+      "type": "hierarchy",
+      "filterHierarchyId": "805f31cc-1cdf-4ff1-91d3-8444ddf1045d",
+      "fieldName": null,
+      "id": "-epXvndFMkA"
+    },
+    {
+      "dashboardId": "4d8b396d-f1df-4f77-b970-7f5120f5f383",
+      "widgetId": "M1x5952EDHY",
+      "type": "field",
+      "filterHierarchyId": "",
+      "fieldName": "Segment",
+      "id": "FgkjZR2352I"
     }
   ],
   "hierarchies": [

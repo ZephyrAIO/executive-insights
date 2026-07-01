@@ -9,12 +9,13 @@ export default function FilterBar({
     dashboardId,
     filters,
     readAppId,
+    onCleared,
     scopeId,
     showClearAll = false,
     title = "Filters",
     writeAppIds,
 }) {
-    const clearFilters = useClearDashboardFilters({ appIds: clearAppIds, dashboardId });
+    const clearFilters = useClearDashboardFilters({ appIds: clearAppIds, dashboardId, onCleared });
 
     if (!filters || filters.length === 0) {
         return null;

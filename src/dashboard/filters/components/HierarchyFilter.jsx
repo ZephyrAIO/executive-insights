@@ -1,68 +1,93 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { useDebounce } from "../../../shared/hooks/useDebounce";
-import { getHierarchyFields } from "../hooks/filterUtils";
+import { getHierarchyFieldConfigs } from "../hooks/filterConfig";
+import { useFilterPopoverOrder } from "../hooks/useFilterPopoverOrder";
 import { getFilterFieldKey, useFilterStore } from "../stores/filterStore";
 import FilterPopover from "./ui/FilterPopover.jsx";
 import FilterSearch from "./ui/FilterSearch.jsx";
 import HierarchyFieldSection from "./ui/HierarchyFieldSection.jsx";
 
+function getSelectedOptionLabel(selected, optionsByValue) {
+    const selectedValue = selected[0];
+    return optionsByValue[selectedValue]?.qText ?? selectedValue;
+}
+
+function getHierarchyLabel(hierarchyName, fields) {
+    const selectedField = fields.findLast((field) => field.selected.length > 0);
+
+    if (!selectedField) {
+        return hierarchyName;
+    }
+
+    if (selectedField.selected.length === 1) {
+        return getSelectedOptionLabel(selectedField.selected, selectedField.optionsByValue);
+    }
+
+    return `${selectedField.fieldLabel} (${selectedField.selected.length})`;
+}
+
 export default function HierarchyFilter({ dashboardId, filter, readAppId, scopeId, writeAppIds }) {
-    const [isOpen, setIsOpen] = useState(false);
-    const [isOrderFrozen, setIsOrderFrozen] = useState(false);
-    const [openRevision, setOpenRevision] = useState(0);
+    const popoverOrder = useFilterPopoverOrder();
     const [searchValue, setSearchValue] = useState("");
     const debouncedSearch = useDebounce(searchValue, 250);
-    const fieldNames = useMemo(() => getHierarchyFields(filter), [filter]);
+    const fieldConfigs = useMemo(() => getHierarchyFieldConfigs(filter), [filter]);
     const hierarchyName = filter.filterHierarchy?.name ?? "Hierarchy";
-    const selectionCount = useFilterStore((state) =>
-        fieldNames.reduce((count, fieldName) => {
-            const fieldKey = getFilterFieldKey({ dashboardId, appId: readAppId, fieldName });
-            return count + (state.fields[fieldKey]?.selected.length ?? 0);
-        }, 0),
+    const storeFields = useFilterStore((state) => state.fields);
+    const fields = useMemo(
+        () =>
+            fieldConfigs.map((fieldConfig) => {
+                const fieldKey = getFilterFieldKey({ dashboardId, scopeId, appId: readAppId, fieldName: fieldConfig.fieldName });
+                const field = storeFields[fieldKey];
+
+                return {
+                    ...fieldConfig,
+                    optionsByValue: field?.optionsByValue ?? {},
+                    selected: field?.selected ?? [],
+                };
+            }),
+        [dashboardId, fieldConfigs, readAppId, scopeId, storeFields],
     );
-    const label = selectionCount > 0 ? `${hierarchyName} (${selectionCount})` : hierarchyName;
-    const disabled = !readAppId || fieldNames.length === 0 || writeAppIds.length === 0;
+    const label = useMemo(() => getHierarchyLabel(hierarchyName, fields), [fields, hierarchyName]);
+    const visibleFieldConfigs = useMemo(
+        () =>
+            fields.filter(
+                (field, index) => !field.automaticVisibility || index === 0 || fields[index - 1].selected.length > 0,
+            ),
+        [fields],
+    );
 
-    const handleOpenChange = (open) => {
-        setIsOpen(open);
-        setIsOrderFrozen(false);
+    const disabled = !readAppId || fieldConfigs.length === 0 || writeAppIds.length === 0;
 
-        if (open) {
-            setOpenRevision((currentRevision) => currentRevision + 1);
-        }
-    };
-
-    useEffect(() => {
-        if (!isOpen) {
-            return;
-        }
-
-        const freezeTimeoutId = window.setTimeout(() => {
-            setIsOrderFrozen(true);
-        }, 0);
-
-        return () => {
-            window.clearTimeout(freezeTimeoutId);
-        };
-    }, [isOpen, openRevision]);
+    if (fieldConfigs.length === 0) {
+        return null;
+    }
 
     return (
-        <FilterPopover disabled={disabled} label={label} loading={false} onOpenChange={handleOpenChange} open={isOpen}>
+        <FilterPopover
+            disabled={disabled}
+            forceMount
+            label={label}
+            loading={false}
+            onOpenChange={popoverOrder.handleOpenChange}
+            open={popoverOrder.isOpen}
+        >
             <FilterSearch
                 onChange={setSearchValue}
-                placeholder={`Search ${fieldNames.join(", ")}`}
+                placeholder={`Search ${fieldConfigs.map((fieldConfig) => fieldConfig.fieldLabel).join(", ")}`}
                 value={searchValue}
             />
             <div className="dashboard-filter-hierarchy-list">
-                {fieldNames.map((fieldName) => (
+                {visibleFieldConfigs.map((fieldConfig) => (
                     <HierarchyFieldSection
+                        allowedOptions={fieldConfig.options}
                         dashboardId={dashboardId}
-                        fieldName={fieldName}
-                        key={fieldName}
+                        fieldLabel={fieldConfig.fieldLabel}
+                        fieldName={fieldConfig.fieldName}
+                        key={fieldConfig.fieldName}
                         readAppId={readAppId}
-                        preserveOrder={isOrderFrozen}
-                        refreshKey={openRevision}
+                        preserveOrder={popoverOrder.preserveOrder}
+                        refreshKey={popoverOrder.refreshRevision}
                         scopeId={scopeId}
                         search={debouncedSearch}
                         writeAppIds={writeAppIds}

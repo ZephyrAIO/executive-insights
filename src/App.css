@@ -222,6 +222,7 @@
 .app-shell-selector select,
 .admin-form-field select,
 .admin-form-field input,
+.admin-form-field textarea,
 .admin-field-array input {
     width: 100%;
     padding: 0.85rem 0.95rem;
@@ -235,12 +236,19 @@
 .app-shell-selector select:focus,
 .admin-form-field select:focus,
 .admin-form-field input:focus,
+.admin-form-field textarea:focus,
 .admin-field-array input:focus {
     border-color: rgba(94, 106, 210, 0.55);
     box-shadow:
         0 0 0 4px rgba(94, 106, 210, 0.16),
         inset 0 1px 0 rgba(255, 255, 255, 0.04);
     outline: none;
+}
+
+.admin-form-field textarea {
+    min-height: 10rem;
+    resize: vertical;
+    font-family: var(--font-mono);
 }
 
 .app-shell-badge {
@@ -668,6 +676,10 @@
     background: rgba(9, 9, 11, 0.98);
     box-shadow: var(--shadow-card-hover);
     backdrop-filter: blur(24px);
+}
+
+.dashboard-filter-popover[data-state="closed"] {
+    display: none;
 }
 
 .dashboard-filter-search {

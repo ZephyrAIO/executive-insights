@@ -36,7 +36,7 @@ function normalizeError(error, fallbackMessage) {
     return fallbackMessage;
 }
 
-export function useClearDashboardFilters({ appIds, dashboardId }) {
+export function useClearDashboardFilters({ appIds, dashboardId, onCleared }) {
     const { qlik, error: qlikError, loading: qlikLoading } = useQlik();
     const resetDashboard = useFilterStore((state) => state.resetDashboard);
     const [clearing, setClearing] = useState(false);
@@ -73,6 +73,7 @@ export function useClearDashboardFilters({ appIds, dashboardId }) {
 
         if (targetAppIds.length === 0) {
             resetDashboard(dashboardId);
+            await onCleared?.({ force: true });
             return;
         }
 
@@ -90,12 +91,13 @@ export function useClearDashboardFilters({ appIds, dashboardId }) {
                 }),
             );
             resetDashboard(dashboardId);
+            await onCleared?.({ force: true });
         } catch (nextError) {
             setError(normalizeError(nextError, "Unable to clear dashboard filters."));
         } finally {
             setClearing(false);
         }
-    }, [appIds, dashboardId, openApp, qlikError, qlikLoading, resetDashboard]);
+    }, [appIds, dashboardId, onCleared, openApp, qlikError, qlikLoading, resetDashboard]);
 
     return {
         clearAll,

@@ -30,10 +30,18 @@ function getOptionStateRank(option) {
     return 1;
 }
 
-function mergeOptions(currentOptions, nextOptions, preserveOrder = false) {
+function mergeOptions(currentOptions, nextOptions, { preserveOrder = false } = {}) {
     if (preserveOrder) {
         const nextOptionMap = new Map(nextOptions.map((option) => [getOptionKey(option), option]));
-        const mergedOptions = currentOptions.map((option) => nextOptionMap.get(getOptionKey(option)) ?? option);
+        const mergedOptions = currentOptions.map((option) => {
+            const nextOption = nextOptionMap.get(getOptionKey(option));
+
+            if (!nextOption) {
+                return option;
+            }
+
+            return { ...nextOption, rowIndex: option.rowIndex };
+        });
         const currentOptionKeys = new Set(currentOptions.map(getOptionKey));
         const appendedOptions = nextOptions.filter((option) => !currentOptionKeys.has(getOptionKey(option)));
 
@@ -139,7 +147,7 @@ export const useFilterStore = create((set, get) => ({
     mergePage: (fieldKey, options, { preserveOrder = false, top = 0, totalSize = null } = {}) => {
         set((state) => {
             const field = state.fields[fieldKey] ?? createFieldState();
-            const mergedOptions = mergeOptions(field.options, options, preserveOrder);
+            const mergedOptions = mergeOptions(field.options, options, { preserveOrder });
             const loadedTops = field.loadedTops.includes(top) ? field.loadedTops : [...field.loadedTops, top];
 
             return {

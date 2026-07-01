@@ -1,74 +1,57 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 
 import FilterOptionList from "./ui/FilterOptionList.jsx";
 import FilterPopover from "./ui/FilterPopover.jsx";
 import FilterSearch from "./ui/FilterSearch.jsx";
+import { getFieldConfig, isFieldAllowed } from "../hooks/filterConfig";
 import { useFilterOptions } from "../hooks/useFilterOptions";
+import { useFilterPopoverOrder } from "../hooks/useFilterPopoverOrder";
 import { useFilterSearch } from "../hooks/useFilterSearch";
 import { useFilterSelection } from "../hooks/useFilterSelection";
 
-function getTriggerLabel(fieldName, selected, optionsByValue) {
+function getTriggerLabel(fieldLabel, selected, optionsByValue) {
     if (selected.length === 1) {
         return optionsByValue[selected[0]]?.qText ?? selected[0];
     }
 
     if (selected.length > 1) {
-        return `${fieldName} (${selected.length})`;
+        return `${fieldLabel} (${selected.length})`;
     }
 
-    return fieldName;
+    return fieldLabel;
 }
 
 export default function FieldFilter({ dashboardId, filter, readAppId, scopeId, writeAppIds }) {
-    const [isOpen, setIsOpen] = useState(false);
-    const [isOrderFrozen, setIsOrderFrozen] = useState(false);
-    const [openRevision, setOpenRevision] = useState(0);
+    const popoverOrder = useFilterPopoverOrder();
     const fieldName = filter.fieldName;
+    const fieldConfig = useMemo(() => getFieldConfig(filter, fieldName), [filter, fieldName]);
     const optionsState = useFilterOptions({
         dashboardId,
         scopeId,
         appId: readAppId,
+        allowedOptions: fieldConfig.options,
         fieldName,
-        preserveOrder: isOrderFrozen,
-        refreshKey: openRevision,
+        preserveOrder: popoverOrder.preserveOrder,
+        refreshKey: popoverOrder.refreshRevision,
     });
     const selection = useFilterSelection({ dashboardId, scopeId, readAppId, writeAppIds, fieldName });
     const [searchValue, setSearchValue] = useFilterSearch(optionsState.fieldKey, optionsState.search);
-    const label = getTriggerLabel(fieldName, selection.selected, optionsState.optionsByValue);
+    const label = getTriggerLabel(fieldConfig.fieldLabel, selection.selected, optionsState.optionsByValue);
     const disabled = !readAppId || !fieldName || writeAppIds.length === 0;
 
-    const handleOpenChange = (open) => {
-        setIsOpen(open);
-        setIsOrderFrozen(false);
-
-        if (open) {
-            setOpenRevision((currentRevision) => currentRevision + 1);
-        }
-    };
-
-    useEffect(() => {
-        if (!isOpen) {
-            return;
-        }
-
-        const freezeTimeoutId = window.setTimeout(() => {
-            setIsOrderFrozen(true);
-        }, 0);
-
-        return () => {
-            window.clearTimeout(freezeTimeoutId);
-        };
-    }, [isOpen, openRevision]);
+    if (!isFieldAllowed(filter, fieldName)) {
+        return null;
+    }
 
     return (
         <FilterPopover
             disabled={disabled}
             label={label}
             loading={optionsState.loading || selection.applying}
-            onOpenChange={handleOpenChange}
-            open={isOpen}
+            onOpenChange={popoverOrder.handleOpenChange}
+            open={popoverOrder.isOpen}
         >
-            <FilterSearch onChange={setSearchValue} placeholder={`Search ${fieldName}`} value={searchValue} />
+            <FilterSearch onChange={setSearchValue} placeholder={`Search ${fieldConfig.fieldLabel}`} value={searchValue} />
             <FilterOptionList
                 applying={selection.applying}
                 error={selection.error ?? optionsState.error}

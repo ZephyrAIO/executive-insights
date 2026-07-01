@@ -28,6 +28,7 @@ export default function FilterOptionList({
     totalSize,
 }) {
     const parentRef = useRef(null);
+
     const rowVirtualizer = useVirtualizer({
         count: options.length,
         getScrollElement: () => parentRef.current,
@@ -38,12 +39,20 @@ export default function FilterOptionList({
     const lastVirtualItem = virtualItems[virtualItems.length - 1];
 
     useEffect(() => {
-        if (!lastVirtualItem || options.length >= totalSize || loading) {
+        if (loading || options.length >= totalSize) {
+            return;
+        }
+
+        if (!lastVirtualItem) {
+            if (options.length === 0 && totalSize > 0) {
+                loadMore();
+            }
+
             return;
         }
 
         if (lastVirtualItem.index >= options.length - 5) {
-            loadMore(options.length);
+            loadMore();
         }
     }, [lastVirtualItem, loadMore, loading, options.length, totalSize]);
 
@@ -85,7 +94,7 @@ export default function FilterOptionList({
                     );
                 })}
             </div>
-            {loading ? <div className="dashboard-filter-message">Loading values...</div> : null}
+            {loading && options.length === 0 ? <div className="dashboard-filter-message">Loading values...</div> : null}
         </div>
     );
 }

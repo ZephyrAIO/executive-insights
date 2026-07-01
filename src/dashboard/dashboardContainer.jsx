@@ -1,5 +1,6 @@
 import DashboardView from "./dashboardView.jsx";
 import FilterBar from "./filters/components/FilterBar.jsx";
+import { useApplyFilterDefaults } from "./filters/hooks/useApplyFilterDefaults.js";
 import { DashboardFilterCleanup } from "./filters/hooks/useDashboardFilterCleanup.jsx";
 import {
     getCoreQlikAppId,
@@ -22,6 +23,11 @@ export default function DashboardContainer({ dashboardId }) {
     const settingsQuery = useSettingsQuery();
     const isLoading = dashboardQuery.isLoading || widgetsQuery.isLoading || filtersQuery.isLoading || settingsQuery.isLoading;
     const error = dashboardQuery.error ?? widgetsQuery.error ?? filtersQuery.error ?? settingsQuery.error;
+    const widgets = widgetsQuery.data ?? [];
+    const filters = filtersQuery.data ?? [];
+    const coreQlikAppId = getCoreQlikAppId(settingsQuery.data);
+    const dashboardWriteAppIds = getDashboardWriteAppIds(widgets);
+    const applyFilterDefaults = useApplyFilterDefaults({ coreQlikAppId, dashboardId, filters, widgets });
 
     if (isLoading) {
         return (
@@ -56,12 +62,8 @@ export default function DashboardContainer({ dashboardId }) {
     }
 
     const dashboard = dashboardQuery.data;
-    const widgets = widgetsQuery.data ?? [];
-    const filters = filtersQuery.data ?? [];
     const dashboardFilters = getDashboardLevelFilters(filters);
     const widgetFilters = groupFiltersByWidget(filters);
-    const coreQlikAppId = getCoreQlikAppId(settingsQuery.data);
-    const dashboardWriteAppIds = getDashboardWriteAppIds(widgets);
     const cleanupAppIds = getUniqueAppIds([coreQlikAppId, ...dashboardWriteAppIds]);
 
     return (
@@ -83,6 +85,7 @@ export default function DashboardContainer({ dashboardId }) {
                     clearAppIds={cleanupAppIds}
                     dashboardId={dashboardId}
                     filters={dashboardFilters}
+                    onCleared={applyFilterDefaults}
                     readAppId={coreQlikAppId}
                     showClearAll
                     scopeId="dashboard"
